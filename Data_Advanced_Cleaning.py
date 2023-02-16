@@ -182,8 +182,8 @@ def show(dataScaled, train_copy, title, col):
     sns.distplot(train_copy[col]).set_title(title)
     plt.show()
     
-show(dataScaled, train_copy,"Distribution without log(1 + price)",'LotArea' )
-show(dataScaled_log1p, train_copy,"Distribution with log(1 + price)",'LotArea_log1p' )
+#show(dataScaled, train_copy,"Distribution without log(1 + price)",'LotArea' )
+#show(dataScaled_log1p, train_copy,"Distribution with log(1 + price)",'LotArea_log1p' )
 
 
 # In[86]:
@@ -200,6 +200,13 @@ final_train_data.head()
 print(final_train_data.shape)
 print(final_test_data.shape)
 
+
+train_x=(final_train_data.iloc[:,:-1]).to_numpy()
+train_y=final_train_data.iloc[:,-1].to_numpy()
+test_x=final_test_data.iloc[:,:-1].to_numpy()
+test_y=final_test_data.iloc[:,-1].to_numpy()
+
+print(train_x) 
 
 # In[ ]:
 
