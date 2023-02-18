@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[46]:
+# In[93]:
 
 
 import numpy as np
@@ -18,7 +18,7 @@ import pandas as pd
 #import keras.optimizers 
 
 
-# In[79]:
+# In[94]:
 
 
 train=pd.read_csv('train.csv')
@@ -36,7 +36,7 @@ print(data.shape)
 data.head()
 
 
-# In[80]:
+# In[95]:
 
 
 ####Printing types of data
@@ -48,25 +48,55 @@ data=data.drop(columns=['Alley', 'PoolQC','Fence','MiscFeature'])
 print(data.shape)
 
 
-# In[81]:
+# In[96]:
+
+
+def object_col_with_nan():
+    L = []
+    for col in list(data.dtypes.where(data.dtypes == np.object).dropna().index):
+        if data[col].isna().sum() > 0:
+            L.append(col)
+    return L
+object_col_with_nan()
+
+def float_col_with_nan():
+    L = []
+    for col in list(data.dtypes.where(data.dtypes == np.float64).dropna().index):
+        if data[col].isna().sum() > 0:
+            L.append(col)
+    return L
+
+def int_col_with_nan():
+    L = []
+    for col in list(data.dtypes.where(data.dtypes == np.int64).dropna().index):
+        if data[col].isna().sum() > 0:
+            L.append(col)
+    return L
+
+print(object_col_with_nan())
+print(numerical_col_with_nan())
+
+
+# In[97]:
 
 
 ####Replace NAN values for int and float types by mean
-def replace_with_mean_float(column):
-    mean_column= data[column].mean()
-    data[column]=data[column].fillna(mean_column)
+def replace_with_mean_float(columns):
+    for column in columns:
+        mean_column= data[column].mean()
+        data[column]=data[column].fillna(mean_column)
     
-def replace_with_mean_int(column):
-    mean_column= round(data[column].mean(),0)
-    data[column]=data[column].fillna(mean_column)
+def replace_with_mean_int(columns):
+    for column in columns:
+        mean_column= round(data[column].mean(),0)
+        data[column]=data[column].fillna(mean_column)
     
-replace_with_mean_int('GarageYrBlt')
-replace_with_mean_float('MasVnrArea')
-replace_with_mean_float('LotFrontage')
+replace_with_mean_int(int_col_with_nan())
+replace_with_mean_float(float_col_with_nan())
 print(data.shape)
 
 
-# In[82]:
+# In[98]:
 
 
 ####Replacing NAN values for categorical types
@@ -79,7 +109,7 @@ def replace_by_value(column):
         data[column]=data[column].fillna(id_max_count)
     else: data[column]=data[column].fillna("Unspecified")
 
-list_Na=["MasVnrType", "FireplaceQu", "GarageType", "GarageFinish","GarageQual", "GarageCond","BsmtQual","BsmtCond","BsmtExposure","BsmtFinType1","BsmtFinType2"]
+list_Na=object_col_with_nan()
 for column in list_Na:
     replace_by_value(column) 
 print(data.shape)
@@ -89,7 +119,7 @@ data=data.dropna()
 print(data.shape)
 
 
-# In[83]:
+# In[99]:
 
 
 #### One-Hot-Encoder
@@ -111,24 +141,29 @@ one_hot_df.columns = one_hot_names
 #print(one_hot_df.head())
 
 
-# In[84]:
+# In[104]:
 
 
 #### Dealing with skewness
-stdScaler = preprocessing.StandardScaler()
-print(data.shape)
-train_copy = data.iloc[:1460,:]
-test_copy = data.iloc[1460:,:]
-print(data.shape)
-numerical_features= list(train_copy.dtypes.where(train_copy.dtypes== np.int64).dropna().index)
-numerical_features = numerical_features + list(train_copy.dtypes.where(train_copy.dtypes== np.float64 ).dropna().index)
+stdScaler_x = preprocessing.StandardScaler()
+stdScaler_y = preprocessing.StandardScaler()
+
+train_copy= data.iloc[:1460,:]
+train_copy_x = pd.DataFrame(data.iloc[:1460,:-1])
+train_copy_y = pd.DataFrame(data.iloc[:1460,-1])
+test_copy_x = pd.DataFrame(data.iloc[1460:,:-1])
+
+
+numerical_features= list(train_copy_x.dtypes.where(train_copy_x.dtypes== np.int64).dropna().index)
+numerical_features = numerical_features + list(train_copy_x.dtypes.where(train_copy_x.dtypes== np.float64 ).dropna().index)
 #numerical_features=numerical_features[30:40]
 #print(numerical_features)
 
-print(test_copy[numerical_features].head())
+
 #Scaling the train and test data using the training distribution
-dataScaled = pd.DataFrame(stdScaler.fit_transform(train_copy[numerical_features]), columns=numerical_features)
-testScaled = pd.DataFrame(stdScaler.transform(test_copy[numerical_features]), columns=numerical_features)
+dataScaled_x = pd.DataFrame(stdScaler_x.fit_transform(train_copy_x[numerical_features]), columns=numerical_features)
+dataScaled_y = pd.DataFrame(stdScaler_y.fit_transform(train_copy_y[['SalePrice']]), columns=['SalePrice'])
+testScaled_x = pd.DataFrame(stdScaler_x.transform(test_copy_x[numerical_features]), columns=numerical_features)
 
 #Defining the columns with highly skewed data
 def highly_skewed_data(numerical_features, dataScaled):
@@ -139,28 +174,33 @@ def highly_skewed_data(numerical_features, dataScaled):
             transform_cols.append(column)
     return transform_cols
 
-transform_cols = highly_skewed_data(numerical_features, dataScaled)
+transform_cols_x = highly_skewed_data(numerical_features, dataScaled_x)
+transform_cols_y = highly_skewed_data(['SalePrice'], dataScaled_y)
+print(transform_cols_y)
 
 #Renaming the columns in transform_cols 
 def take_log_col(col):
-    if col in transform_cols: return col + '_log1p'
+    if col in transform_cols_x or col in transform_cols_y: return col + '_log1p'
     else: return col
 
 #applying the log transformation to our training and testing data
-def add_log1p_col(train_copy):
+def add_log1p_col(train_copy, transform_cols):
     for col in transform_cols:
         col_log1p = col + '_log1p'
         train_copy[col_log1p] = train_copy[col].apply(math.log1p)
 
-add_log1p_col(train_copy)
-add_log1p_col(test_copy)
+add_log1p_col(train_copy_x, transform_cols_x)
+add_log1p_col(train_copy_y, transform_cols_y)
+add_log1p_col(test_copy_x, transform_cols_x)
 
 
 #Scaling the newly added features using the training distribution
 numerical_features_log1p = numerical_features
 numerical_features_log1p[:] = [take_log_col(col) for col in numerical_features_log1p]
-dataScaled_log1p = pd.DataFrame(stdScaler.fit_transform(train_copy[numerical_features_log1p]), columns=numerical_features_log1p)
-testScaled_log1p = pd.DataFrame(stdScaler.transform(test_copy[numerical_features_log1p]), columns=numerical_features_log1p)
+dataScaled_log1p_x = pd.DataFrame(stdScaler_x.fit_transform(train_copy_x[numerical_features_log1p]), columns=numerical_features_log1p)
+testScaled_log1p_x= pd.DataFrame(stdScaler_x.transform(test_copy_x[numerical_features_log1p]), columns=numerical_features_log1p)
+dataScaled_log1p_y = pd.DataFrame(stdScaler_y.fit_transform(train_copy_y[[take_log_col('SalePrice')]]), columns=[take_log_col('SalePrice')])
+
 
 
         
@@ -170,7 +210,7 @@ testScaled_log1p = pd.DataFrame(stdScaler.transform(test_copy[numerical_features
     
 
 
-# In[85]:
+# In[105]:
 
 
 def show(dataScaled, train_copy, title, col):
@@ -182,31 +222,33 @@ def show(dataScaled, train_copy, title, col):
     sns.distplot(train_copy[col]).set_title(title)
     plt.show()
     
-#show(dataScaled, train_copy,"Distribution without log(1 + price)",'LotArea' )
-#show(dataScaled_log1p, train_copy,"Distribution with log(1 + price)",'LotArea_log1p' )
+show(dataScaled_x, train_copy_x,"Distribution without log(1 + price)",'LotArea' )
+show(dataScaled_log1p_x, train_copy_x,"Distribution with log(1 + price)",'LotArea_log1p' )
+show(dataScaled_y, train_copy_y,"Distribution without log(1 + price)",'SalePrice' )
+show(dataScaled_log1p_y, train_copy_y,"Distribution with log(1 + price)",'SalePrice_log1p' )
 
 
-# In[86]:
+# In[109]:
 
 
-final_train_data = pd.merge(dataScaled_log1p, one_hot_df, left_index = True, right_index = True )
-final_test_data = pd.merge(testScaled_log1p, one_hot_df, left_index = True, right_index = True )
+final_train_data_x = pd.merge(dataScaled_log1p_x, one_hot_df, left_index = True, right_index = True )
+final_test_data_x = pd.merge(testScaled_log1p_x, one_hot_df, left_index = True, right_index = True )
+final_train_data_y= dataScaled_log1p_y
 
 
-# In[88]:
+# In[110]:
 
 
-final_train_data.head()
-print(final_train_data.shape)
-print(final_test_data.shape)
+final_train_data_x.head()
+print(final_train_data_x.shape)
+print(final_test_data_x.shape)
 
 
-train_x=(final_train_data.iloc[:,:-1]).to_numpy()
-train_y=final_train_data.iloc[:,-1].to_numpy()
-test_x=final_test_data.iloc[:,:-1].to_numpy()
-test_y=final_test_data.iloc[:,-1].to_numpy()
+# In[1]:
 
-print(train_x) 
+
+final_test_data_x.head()
+
 
 # In[ ]:
 

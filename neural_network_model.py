@@ -1,3 +1,4 @@
+
 import numpy as np
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
@@ -8,12 +9,12 @@ import keras.optimizers
 
 import Data_Advanced_Cleaning as dt
 
-
-
+train_x, test_x, train_y, test_y = train_test_split(dt.final_train_data_x, dt.final_train_data_y, test_size = 0.2, random_state = 123)
 
 model = Sequential()
-num_columns= (dt.train_x).shape[1]
-num_rows=(dt.train_x).shape[0]
+num_columns= (dt.final_train_data_x).shape[1]
+num_rows=(dt.final_train_data_x).shape[0]
+
 
 #1/5/7/10  
 model.add(Dense(num_columns, input_shape=(num_columns,), activation = 'relu' ,kernel_initializer=initializers.RandomNormal(stddev=0.01), bias_initializer=initializers.Zeros())) # (features,)
@@ -22,7 +23,6 @@ model.add(Dense(10,activation = 'relu' ,kernel_initializer=initializers.RandomNo
 model.add(Dense(20,activation = 'relu' ,kernel_initializer=initializers.RandomNormal(stddev=0.01)))
 model.add(Dense(5,activation = 'relu' ,kernel_initializer=initializers.RandomNormal(stddev=0.01)))
 model.add(Dense(1,activation = 'relu' ,kernel_initializer=initializers.RandomNormal(stddev=0.01))) # output node with 0.009 lerning rate
-
 
 
 model.summary() # see what the model looks like
@@ -39,9 +39,9 @@ model.compile(
 
 print("Fit model on training data")
 history = model.fit(
-    dt.train_x,
-    dt.train_y,
-    validation_data=(dt.test_x,dt.test_y),
+    train_x,
+    train_y,
+    validation_data=(test_x,test_y),
     batch_size=1460,
     epochs=100,
     verbose=2,
@@ -70,7 +70,13 @@ with open("model.json", "w") as json_file:
 model.save_weights("model.h5")
 
 
-pred_vect = model.predict(dt.test_x)
+pred_vect = model.predict(dt.final_test_data_x)
+pred_vect = dt.stdScaler_y.inverse_transform(pred_vect)[0]
+pred_vect = [round(element,0) for element in pred_vect]
+Id = dt.final_test_data_x['Id'].values
+sub_data = {'Id': Id, 'SalePrice': pred_vect}
+df_sub = pd.DataFrame(sub_data)
+df_sub.to_csv('Submission.csv', index=False)
 
 
-
+print(2)
