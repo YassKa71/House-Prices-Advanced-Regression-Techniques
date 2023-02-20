@@ -13,6 +13,7 @@ import seaborn as sns
 from sklearn import preprocessing
 from sklearn.compose import ColumnTransformer
 import pandas as pd
+from sklearn.decomposition import PCA as pca
 #from keras.models import Sequential
 #from keras.layers import Dense
 #import keras.optimizers 
@@ -74,7 +75,7 @@ def int_col_with_nan():
     return L
 
 print(object_col_with_nan())
-print(numerical_col_with_nan())
+
 
 
 # In[97]:
@@ -200,6 +201,8 @@ numerical_features_log1p[:] = [take_log_col(col) for col in numerical_features_l
 dataScaled_log1p_x = pd.DataFrame(stdScaler_x.fit_transform(train_copy_x[numerical_features_log1p]), columns=numerical_features_log1p)
 testScaled_log1p_x= pd.DataFrame(stdScaler_x.transform(test_copy_x[numerical_features_log1p]), columns=numerical_features_log1p)
 dataScaled_log1p_y = pd.DataFrame(stdScaler_y.fit_transform(train_copy_y[[take_log_col('SalePrice')]]), columns=[take_log_col('SalePrice')])
+#dataScaled_log1p_y = pd.DataFrame(stdScaler_y.fit_transform(train_copy_y[['SalePrice']]), columns=['SalePrice'])
+
 
 
 
@@ -222,11 +225,13 @@ def show(dataScaled, train_copy, title, col):
     sns.distplot(train_copy[col]).set_title(title)
     plt.show()
     
-show(dataScaled_x, train_copy_x,"Distribution without log(1 + price)",'LotArea' )
+'''show(dataScaled_x, train_copy_x,"Distribution without log(1 + price)",'LotArea' )
 show(dataScaled_log1p_x, train_copy_x,"Distribution with log(1 + price)",'LotArea_log1p' )
 show(dataScaled_y, train_copy_y,"Distribution without log(1 + price)",'SalePrice' )
-show(dataScaled_log1p_y, train_copy_y,"Distribution with log(1 + price)",'SalePrice_log1p' )
+show(dataScaled_log1p_y, train_copy_y,"Distribution with log(1 + price)",'SalePrice_log1p' )'''
 
+#show(dataScaled_y, train_copy_y,"Distribution without log(1 + price)",'SalePrice' )
+#show(dataScaled_log1p_y, train_copy_y,"Distribution with log(1 + price)",'SalePrice_log1p' )
 
 # In[109]:
 
@@ -239,18 +244,17 @@ final_train_data_y= dataScaled_log1p_y
 # In[110]:
 
 
-final_train_data_x.head()
+'''final_train_data_x.head()
 print(final_train_data_x.shape)
-print(final_test_data_x.shape)
+print(final_test_data_x.shape)'''
 
 
-# In[1]:
 
-
-final_test_data_x.head()
 
 
 # In[ ]:
+
+
 
 
 
